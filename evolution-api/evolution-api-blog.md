@@ -154,11 +154,28 @@ PostgreSQL stores the instance configuration — the instance name, settings, we
 
 Here's why this matters in practice:
 
-| Scenario | What Happens |
-|----------|-------------|
-| Both intact | Auto-reconnects on restart. You don't even notice. |
-| Volume wiped, DB intact | Evolution knows the instance exists but lost the session keys. You need to re-scan QR, but you don't have to recreate the instance from scratch. |
-| Both wiped | Everything's gone. Full recreate + re-scan QR. |
+<table>
+  <thead>
+    <tr>
+      <th style="text-align:left;padding:12px 16px;background:#f8f9fa;border-bottom:2px solid #dee2e6;">Scenario</th>
+      <th style="text-align:left;padding:12px 16px;background:#f8f9fa;border-bottom:2px solid #dee2e6;">What Happens</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr style="background:#d4edda;">
+      <td style="padding:10px 16px;border-bottom:1px solid #e9ecef;"><strong>Both intact</strong></td>
+      <td style="padding:10px 16px;border-bottom:1px solid #e9ecef;">Auto-reconnects on restart. You don't even notice.</td>
+    </tr>
+    <tr style="background:#fff3cd;">
+      <td style="padding:10px 16px;border-bottom:1px solid #e9ecef;"><strong>Volume wiped, DB intact</strong></td>
+      <td style="padding:10px 16px;border-bottom:1px solid #e9ecef;">Evolution knows the instance exists but lost the session keys. You need to re-scan QR, but you don't have to recreate the instance from scratch.</td>
+    </tr>
+    <tr style="background:#f8d7da;">
+      <td style="padding:10px 16px;border-bottom:1px solid #e9ecef;"><strong>Both wiped</strong></td>
+      <td style="padding:10px 16px;border-bottom:1px solid #e9ecef;">Everything's gone. Full recreate + re-scan QR.</td>
+    </tr>
+  </tbody>
+</table>
 
 The connection string uses a `?schema=evolution` parameter, which tells Evolution to create its tables in a separate PostgreSQL schema. I share the same Supabase database between my backend and Evolution — they each get their own schema and never step on each other's tables.
 
@@ -271,11 +288,28 @@ Evolution doesn't just send messages — it also receives them. When a customer 
 
 [IMAGE: Insert the **Webhook Events** diagram here — shows Customer message → MESSAGES_UPSERT, Connection change → CONNECTION_UPDATE, QR refresh → QRCODE_UPDATED, all flowing to your backend. Export from `diagrams/evolution-05-webhook-events.drawio`]
 
-| Event | What Triggers It |
-|-------|-----------------|
-| `MESSAGES_UPSERT` | A customer sends you a WhatsApp message |
-| `CONNECTION_UPDATE` | Your WhatsApp connection state changes (connected, disconnected, reconnecting) |
-| `QRCODE_UPDATED` | The QR code refreshes — they expire roughly every 60 seconds |
+<table>
+  <thead>
+    <tr>
+      <th style="text-align:left;padding:12px 16px;background:#f8f9fa;border-bottom:2px solid #dee2e6;">Event</th>
+      <th style="text-align:left;padding:12px 16px;background:#f8f9fa;border-bottom:2px solid #dee2e6;">What Triggers It</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="padding:10px 16px;border-bottom:1px solid #e9ecef;"><code>MESSAGES_UPSERT</code></td>
+      <td style="padding:10px 16px;border-bottom:1px solid #e9ecef;">A customer sends you a WhatsApp message</td>
+    </tr>
+    <tr style="background:#f8f9fa;">
+      <td style="padding:10px 16px;border-bottom:1px solid #e9ecef;"><code>CONNECTION_UPDATE</code></td>
+      <td style="padding:10px 16px;border-bottom:1px solid #e9ecef;">Your WhatsApp connection state changes (connected, disconnected, reconnecting)</td>
+    </tr>
+    <tr>
+      <td style="padding:10px 16px;border-bottom:1px solid #e9ecef;"><code>QRCODE_UPDATED</code></td>
+      <td style="padding:10px 16px;border-bottom:1px solid #e9ecef;">The QR code refreshes — they expire roughly every 60 seconds</td>
+    </tr>
+  </tbody>
+</table>
 
 Here's what an incoming message webhook looks like:
 
@@ -376,15 +410,52 @@ So the duplicate check has to happen at connection time. When a `CONNECTION_UPDA
 
 I want to be honest about the tradeoffs, because Evolution API isn't the right choice for everyone:
 
-| | Evolution API | Official Business API |
-|---|---|---|
-| Setup | 5 minutes | Days to weeks |
-| Cost | Free (self-hosted) | Per-conversation pricing |
-| Template approval | None | Required for outbound |
-| Reliability | On you | Meta's SLA |
-| Ban risk | Real | Zero |
-| Scale | Hundreds/day | Millions/day |
-| Support | GitHub community | Meta support |
+<table>
+  <thead>
+    <tr>
+      <th style="text-align:left;padding:12px 16px;background:#f8f9fa;border-bottom:2px solid #dee2e6;">Factor</th>
+      <th style="text-align:left;padding:12px 16px;background:#f8f9fa;border-bottom:2px solid #dee2e6;">Evolution API (Baileys)</th>
+      <th style="text-align:left;padding:12px 16px;background:#f8f9fa;border-bottom:2px solid #dee2e6;">Official Business API</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="padding:10px 16px;border-bottom:1px solid #e9ecef;"><strong>Setup time</strong></td>
+      <td style="padding:10px 16px;border-bottom:1px solid #e9ecef;">5 minutes</td>
+      <td style="padding:10px 16px;border-bottom:1px solid #e9ecef;">Days to weeks</td>
+    </tr>
+    <tr style="background:#f8f9fa;">
+      <td style="padding:10px 16px;border-bottom:1px solid #e9ecef;"><strong>Cost</strong></td>
+      <td style="padding:10px 16px;border-bottom:1px solid #e9ecef;">Free (self-hosted)</td>
+      <td style="padding:10px 16px;border-bottom:1px solid #e9ecef;">Per-conversation pricing</td>
+    </tr>
+    <tr>
+      <td style="padding:10px 16px;border-bottom:1px solid #e9ecef;"><strong>Template approval</strong></td>
+      <td style="padding:10px 16px;border-bottom:1px solid #e9ecef;">None needed</td>
+      <td style="padding:10px 16px;border-bottom:1px solid #e9ecef;">Required for outbound</td>
+    </tr>
+    <tr style="background:#f8f9fa;">
+      <td style="padding:10px 16px;border-bottom:1px solid #e9ecef;"><strong>Reliability</strong></td>
+      <td style="padding:10px 16px;border-bottom:1px solid #e9ecef;">Depends on your infra</td>
+      <td style="padding:10px 16px;border-bottom:1px solid #e9ecef;">Meta's SLA</td>
+    </tr>
+    <tr>
+      <td style="padding:10px 16px;border-bottom:1px solid #e9ecef;"><strong>Ban risk</strong></td>
+      <td style="padding:10px 16px;border-bottom:1px solid #e9ecef;">Real (bot detection)</td>
+      <td style="padding:10px 16px;border-bottom:1px solid #e9ecef;">Zero</td>
+    </tr>
+    <tr style="background:#f8f9fa;">
+      <td style="padding:10px 16px;border-bottom:1px solid #e9ecef;"><strong>Scale</strong></td>
+      <td style="padding:10px 16px;border-bottom:1px solid #e9ecef;">Hundreds per day safely</td>
+      <td style="padding:10px 16px;border-bottom:1px solid #e9ecef;">Millions per day</td>
+    </tr>
+    <tr>
+      <td style="padding:10px 16px;border-bottom:1px solid #e9ecef;"><strong>Support</strong></td>
+      <td style="padding:10px 16px;border-bottom:1px solid #e9ecef;">GitHub community</td>
+      <td style="padding:10px 16px;border-bottom:1px solid #e9ecef;">Meta support</td>
+    </tr>
+  </tbody>
+</table>
 
 If you're building an MVP, a side project, or serving a market where WhatsApp is the dominant communication channel (South Asia, Latin America, parts of Africa), Evolution API is a great fit. You get full control, zero cost, and you can move fast.
 
@@ -396,30 +467,110 @@ If you're at enterprise scale, in a regulated industry, or can't afford any down
 
 ### Endpoints You'll Use Most
 
-| What | Method | Endpoint |
-|------|--------|----------|
-| Create instance | POST | `/instance/create` |
-| Get QR code | GET | `/instance/connect/{instance}` |
-| Get pairing code | POST | `/instance/connect/{instance}` |
-| Check status | GET | `/instance/connectionState/{instance}` |
-| Send text | POST | `/message/sendText/{instance}` |
-| Send poll | POST | `/message/sendPoll/{instance}` |
-| Disconnect | DELETE | `/instance/logout/{instance}` |
-| Delete instance | DELETE | `/instance/delete/{instance}` |
+<table>
+  <thead>
+    <tr>
+      <th style="text-align:left;padding:12px 16px;background:#f8f9fa;border-bottom:2px solid #dee2e6;">Action</th>
+      <th style="text-align:left;padding:12px 16px;background:#f8f9fa;border-bottom:2px solid #dee2e6;">Method</th>
+      <th style="text-align:left;padding:12px 16px;background:#f8f9fa;border-bottom:2px solid #dee2e6;">Endpoint</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="padding:10px 16px;border-bottom:1px solid #e9ecef;">Create instance</td>
+      <td style="padding:10px 16px;border-bottom:1px solid #e9ecef;"><code>POST</code></td>
+      <td style="padding:10px 16px;border-bottom:1px solid #e9ecef;"><code>/instance/create</code></td>
+    </tr>
+    <tr style="background:#f8f9fa;">
+      <td style="padding:10px 16px;border-bottom:1px solid #e9ecef;">Get QR code</td>
+      <td style="padding:10px 16px;border-bottom:1px solid #e9ecef;"><code>GET</code></td>
+      <td style="padding:10px 16px;border-bottom:1px solid #e9ecef;"><code>/instance/connect/{instance}</code></td>
+    </tr>
+    <tr>
+      <td style="padding:10px 16px;border-bottom:1px solid #e9ecef;">Get pairing code</td>
+      <td style="padding:10px 16px;border-bottom:1px solid #e9ecef;"><code>POST</code></td>
+      <td style="padding:10px 16px;border-bottom:1px solid #e9ecef;"><code>/instance/connect/{instance}</code></td>
+    </tr>
+    <tr style="background:#f8f9fa;">
+      <td style="padding:10px 16px;border-bottom:1px solid #e9ecef;">Check status</td>
+      <td style="padding:10px 16px;border-bottom:1px solid #e9ecef;"><code>GET</code></td>
+      <td style="padding:10px 16px;border-bottom:1px solid #e9ecef;"><code>/instance/connectionState/{instance}</code></td>
+    </tr>
+    <tr>
+      <td style="padding:10px 16px;border-bottom:1px solid #e9ecef;">Send text</td>
+      <td style="padding:10px 16px;border-bottom:1px solid #e9ecef;"><code>POST</code></td>
+      <td style="padding:10px 16px;border-bottom:1px solid #e9ecef;"><code>/message/sendText/{instance}</code></td>
+    </tr>
+    <tr style="background:#f8f9fa;">
+      <td style="padding:10px 16px;border-bottom:1px solid #e9ecef;">Send poll</td>
+      <td style="padding:10px 16px;border-bottom:1px solid #e9ecef;"><code>POST</code></td>
+      <td style="padding:10px 16px;border-bottom:1px solid #e9ecef;"><code>/message/sendPoll/{instance}</code></td>
+    </tr>
+    <tr>
+      <td style="padding:10px 16px;border-bottom:1px solid #e9ecef;">Disconnect</td>
+      <td style="padding:10px 16px;border-bottom:1px solid #e9ecef;"><code>DELETE</code></td>
+      <td style="padding:10px 16px;border-bottom:1px solid #e9ecef;"><code>/instance/logout/{instance}</code></td>
+    </tr>
+    <tr style="background:#f8f9fa;">
+      <td style="padding:10px 16px;border-bottom:1px solid #e9ecef;">Delete instance</td>
+      <td style="padding:10px 16px;border-bottom:1px solid #e9ecef;"><code>DELETE</code></td>
+      <td style="padding:10px 16px;border-bottom:1px solid #e9ecef;"><code>/instance/delete/{instance}</code></td>
+    </tr>
+  </tbody>
+</table>
 
 ### Environment Variables Worth Knowing
 
-| Variable | What It Does |
-|----------|-------------|
-| `AUTHENTICATION_API_KEY` | API key for authenticating all requests |
-| `SERVER_URL` | Public URL of your Evolution instance |
-| `WEBHOOK_GLOBAL_URL` | Where Evolution sends webhook events |
-| `DATABASE_ENABLED` / `DATABASE_PROVIDER` | Enable PostgreSQL persistence |
-| `DATABASE_CONNECTION_URI` | PostgreSQL connection string (use `?schema=evolution`) |
-| `DATABASE_SAVE_DATA_INSTANCE` | The one flag you should enable |
-| `CACHE_LOCAL_ENABLED` | In-memory caching (keep it simple) |
-| `DEL_INSTANCE` | Set to `false` so instances survive disconnects |
-| `LOG_LEVEL` | `ERROR,WARN` for production, `INFO` for debugging |
+<table>
+  <thead>
+    <tr>
+      <th style="text-align:left;padding:12px 16px;background:#f8f9fa;border-bottom:2px solid #dee2e6;">Variable</th>
+      <th style="text-align:left;padding:12px 16px;background:#f8f9fa;border-bottom:2px solid #dee2e6;">What It Does</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="padding:10px 16px;border-bottom:1px solid #e9ecef;"><code>AUTHENTICATION_API_KEY</code></td>
+      <td style="padding:10px 16px;border-bottom:1px solid #e9ecef;">API key for authenticating all requests</td>
+    </tr>
+    <tr style="background:#f8f9fa;">
+      <td style="padding:10px 16px;border-bottom:1px solid #e9ecef;"><code>SERVER_URL</code></td>
+      <td style="padding:10px 16px;border-bottom:1px solid #e9ecef;">Public URL of your Evolution instance</td>
+    </tr>
+    <tr>
+      <td style="padding:10px 16px;border-bottom:1px solid #e9ecef;"><code>WEBHOOK_GLOBAL_URL</code></td>
+      <td style="padding:10px 16px;border-bottom:1px solid #e9ecef;">Where Evolution sends webhook events</td>
+    </tr>
+    <tr style="background:#f8f9fa;">
+      <td style="padding:10px 16px;border-bottom:1px solid #e9ecef;"><code>DATABASE_ENABLED</code></td>
+      <td style="padding:10px 16px;border-bottom:1px solid #e9ecef;">Enable external database persistence (<code>true</code> or <code>false</code>)</td>
+    </tr>
+    <tr>
+      <td style="padding:10px 16px;border-bottom:1px solid #e9ecef;"><code>DATABASE_PROVIDER</code></td>
+      <td style="padding:10px 16px;border-bottom:1px solid #e9ecef;">Database type — <code>postgresql</code> or <code>mongodb</code></td>
+    </tr>
+    <tr style="background:#f8f9fa;">
+      <td style="padding:10px 16px;border-bottom:1px solid #e9ecef;"><code>DATABASE_CONNECTION_URI</code></td>
+      <td style="padding:10px 16px;border-bottom:1px solid #e9ecef;">Full connection string (use <code>?schema=evolution</code>)</td>
+    </tr>
+    <tr>
+      <td style="padding:10px 16px;border-bottom:1px solid #e9ecef;"><code>DATABASE_SAVE_DATA_INSTANCE</code></td>
+      <td style="padding:10px 16px;border-bottom:1px solid #e9ecef;">The one flag you should set to <code>true</code></td>
+    </tr>
+    <tr style="background:#f8f9fa;">
+      <td style="padding:10px 16px;border-bottom:1px solid #e9ecef;"><code>CACHE_LOCAL_ENABLED</code></td>
+      <td style="padding:10px 16px;border-bottom:1px solid #e9ecef;">In-memory caching — keep it simple</td>
+    </tr>
+    <tr>
+      <td style="padding:10px 16px;border-bottom:1px solid #e9ecef;"><code>DEL_INSTANCE</code></td>
+      <td style="padding:10px 16px;border-bottom:1px solid #e9ecef;">Set to <code>false</code> so instances survive disconnects</td>
+    </tr>
+    <tr style="background:#f8f9fa;">
+      <td style="padding:10px 16px;border-bottom:1px solid #e9ecef;"><code>LOG_LEVEL</code></td>
+      <td style="padding:10px 16px;border-bottom:1px solid #e9ecef;"><code>ERROR,WARN</code> for production, <code>INFO</code> for debugging</td>
+    </tr>
+  </tbody>
+</table>
 
 ---
 
